@@ -4,7 +4,7 @@
             [svm-techml-smile.bridge :refer [dscol->smilecol dataset->dataframe dataset->array cast-to-float]]
             [svm-techml-smile.features :refer [build-column build-many-columns]]
             [svm-techml-smile.kernel :refer [estimate-sigma prepare-features fit-RBF-SVM fit-RBF-SVR]]
-            [svm-techml-smile.preprocessing :refer [model-spec one-hot-reducer prepare-svr-data]]
+            [svm-techml-smile.preprocessing :refer [svr-model-spec one-hot-reducer prepare-svr-data]]
             [svm-techml-smile.classification :refer [labels->01 evaluate-classifier]]))
 
 (def sample-ds
@@ -71,8 +71,8 @@
 
 (deftest preprocessing-tests
   (testing "model-spec constructor"
-    (let [spec (model-spec cs-ds :id :ztw [:dur :rat]
-                           :one-hot-cols [:ccy])]
+    (let [spec (svr-model-spec cs-ds :id :ztw [:dur :rat]
+                               :one-hot-cols [:ccy])]
       (is (= :svr (:type spec)))
       (is (= :id (:id-name spec)))
       (is (= :ztw (get-in spec [:y :column])))
@@ -83,14 +83,14 @@
       (is (some #(clojure.string/starts-with? (name %) "ccy") (ds/column-names result)))))
 
   (testing "prepare-svr-data returns required keys"
-    (let [spec   (model-spec cs-ds :id :ztw [:dur :rat] :one-hot-cols [:ccy])
+    (let [spec   (svr-model-spec cs-ds :id :ztw [:dur :rat] :one-hot-cols [:ccy])
           result (prepare-svr-data spec)]
       (is (every? #(contains? result %) [:features-cols :sigma :features-array :y-array]))
       (is (pos? (:sigma result)))
       (is (some? (get-in result [:std-scale :scaler])))))
 
   (testing "prepare-svr-data + fit-RBF-SVR roundtrip"
-    (let [spec    (model-spec cs-ds :id :ztw [:dur :rat] :one-hot-cols [:ccy])
+    (let [spec    (svr-model-spec cs-ds :id :ztw [:dur :rat] :one-hot-cols [:ccy])
           prepped (prepare-svr-data spec)
           km      (fit-RBF-SVR (:features-array prepped) (:y-array prepped) (:sigma prepped) 0.1 10.0)]
       (is (some? km)))))

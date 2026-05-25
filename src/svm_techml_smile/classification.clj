@@ -52,7 +52,7 @@
 
 ;;; Model spec constructor
 
-(defn model-spec
+(defn svm-model-spec
   "Build a base time-series SVM classification spec.
 
   Required args:

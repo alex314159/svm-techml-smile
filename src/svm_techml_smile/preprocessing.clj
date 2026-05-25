@@ -31,7 +31,7 @@
 
 ;;; Model spec constructor
 
-(defn model-spec
+(defn svr-model-spec
   "Build a base cross-sectional SVR model spec.
 
   Required args:

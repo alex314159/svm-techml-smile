@@ -26,11 +26,11 @@
 (def scale-new-features  kernel/scale-new-features)
 
 ;;; preprocessing (cross-sectional SVR)
-(def svr-model-spec      pre/model-spec)
+(def svr-model-spec      pre/svr-model-spec)
 (def one-hot-reducer     pre/one-hot-reducer)
 (def prepare-svr-data    pre/prepare-svr-data)
 
 ;;; classification (time-series SVM)
-(def ts-model-spec       cls/model-spec)
+(def ts-model-spec       cls/svm-model-spec)
 (def labels->01          cls/labels->01)
 (def evaluate-classifier cls/evaluate-classifier)
