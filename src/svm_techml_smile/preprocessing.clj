@@ -21,11 +21,9 @@
   (:require [tech.v3.dataset :as ds]
             [tech.v3.dataset.categorical :as categorical]
             [tech.v3.dataset.math :as dsm]
-            [svm-techml-smile.bridge :refer [dscol->smilecol dataset->dataframe]]
+            [svm-techml-smile.bridge :refer [dataset->array]]
             [svm-techml-smile.features :refer [build-many-columns]]
-            [svm-techml-smile.kernel :refer [estimate-sigma]])
-  (:import (smile.data DataFrame)
-           (smile.data.vector DoubleVector)))
+            [svm-techml-smile.kernel :refer [estimate-sigma]]))
 
 (set! *warn-on-reflection* true)
 
@@ -97,26 +95,17 @@
   (let [transformed  (if (seq (:transformations spec))
                        (build-many-columns (:dataset spec) (:transformations spec))
                        (:dataset spec))
-        scaler       (dsm/fit-std-scale
-                      (ds/select-columns transformed (get-in spec [:std-scale :columns])))
+        scaler       (-> transformed
+                         (ds/select-columns (get-in spec [:std-scale :columns]))
+                         (dsm/fit-std-scale))
         clean-data   (-> transformed
                          (ds/remove-columns (:removals spec))
-                         (one-hot-reducer
-                          (get-in spec [:one-hot :columns])
-                          (get-in spec [:one-hot :removals]))
+                         (one-hot-reducer (get-in spec [:one-hot :columns]) (get-in spec [:one-hot :removals]))
                          (dsm/transform-std-scale scaler))
-        features-ds  (ds/remove-columns clean-data
-                                        [(:id-name spec)
-                                         (get-in spec [:y :column])])
-        sigma        (estimate-sigma features-ds)
-        feat-array   (.toArray ^DataFrame (dataset->dataframe features-ds)
-                               (into-array String []))
-        y-array      (.toDoubleArray ^DoubleVector
-                      (dscol->smilecol
-                       (clean-data (get-in spec [:y :column]))))]
+        features-ds  (ds/remove-columns clean-data [(:id-name spec) (get-in spec [:y :column])])]
     (assoc spec
            :std-scale      (assoc (:std-scale spec) :scaler scaler)
            :features-cols  (ds/column-names features-ds)
-           :sigma          sigma
-           :features-array feat-array
-           :y-array        y-array)))
+           :sigma          (estimate-sigma features-ds)
+           :features-array (dataset->array features-ds)
+           :y-array        (double-array (clean-data (get-in spec [:y :column]))))))

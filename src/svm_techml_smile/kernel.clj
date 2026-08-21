@@ -2,13 +2,13 @@
   "RBF kernel estimation, fitting, and std-scaling helpers for Smile SVM/SVR."
   (:require [tech.v3.dataset :as ds]
             [tech.v3.dataset.math :as dsm]
+            [tech.v3.datatype :as dtype]
             [tech.v3.datatype.functional :as dfn]
-            [svm-techml-smile.bridge :refer [dataset->dataframe]])
-  (:import (smile.data DataFrame)
-           (smile.math.kernel GaussianKernel)
+            [svm-techml-smile.bridge :refer [dataset->array]])
+  (:import (smile.math.kernel GaussianKernel)
            (smile.classification SVM SVM$Options)
            (smile.model.svm SVR)
-           (smile.regression KernelMachine)))
+           (smile.regression KernelMachine Regression)))
 
 (set! *warn-on-reflection* true)
 
@@ -29,13 +29,25 @@
 (defn estimate-sigma
   "Estimate the RBF Gaussian kernel bandwidth from a scaled feature matrix.
 
-  Uses the sklearn 'scale' convention:
+  Follows the sklearn 'scale' convention:
     sigma = sqrt(0.5 * n_features * variance(flatten(X)))
-  which corresponds to gamma = 1 / (n_features * X.var()) in sklearn notation."
+  i.e. gamma = 1 / (n_features * X.var()). Note `variance` here is the sample
+  variance (n-1 denominator); sklearn's X.var() uses n, so sigma runs a factor
+  sqrt(n/(n-1)) high — under 0.01% for any matrix over 5k values.
+
+  Missing values are skipped, not propagated — bridge/dataset->array is what
+  rejects them. Throws if sigma is not positive, since a zero-variance feature
+  matrix would otherwise build a degenerate GaussianKernel."
   [scaled-ds]
-  (Math/sqrt (* 0.5
-                (ds/column-count scaled-ds)
-                (dfn/variance (vec (flatten (ds/value-reader scaled-ds)))))))
+  (let [sigma (Math/sqrt (* 0.5
+                            (ds/column-count scaled-ds)
+                            (dfn/variance
+                             (dtype/concat-buffers
+                              (map #(ds/column scaled-ds %) (ds/column-names scaled-ds))))))]
+    (when-not (pos? sigma)
+      (throw (ex-info "RBF sigma must be positive — feature matrix has zero variance or missing/NaN values"
+                      {:sigma sigma :columns (ds/column-names scaled-ds)})))
+    sigma))
 
 ;;; SVM (classifier, labels {-1, +1})
 
@@ -55,6 +67,38 @@
   [^"[[D" x ^"[D" y sigma eps C]
   (.fit (SVR. (GaussianKernel. sigma) eps C 0.01) x y))
 
+;;; Prediction + scoring
+;;
+;; These exist so callers never have to import or type-hint a Smile class.
+;; Both are hinted to smile.regression.Regression, the interface KernelMachine
+;; implements, so an unhinted caller pays no reflection cost.
+
+(defn predict
+  "Predict one observation. features is a double[] in training column order.
+  Reflection-free replacement for (.predict ^KernelMachine km ^doubles row)."
+  ^double [^Regression model features]
+  (.predict model ^Object features))
+
+(defn predict-all
+  "Predict a whole feature matrix. features is a double[][] (see
+  bridge/dataset->array); returns a double[] of predictions."
+  ^"[D" [^Regression model features]
+  (.predict model ^objects features))
+
+(defn rsq
+  "In-sample R^2 against an origin baseline: 1 - sum((y - yhat)^2) / sum(y^2).
+
+  Note this is the UNCENTERED R^2 — the denominator is sum(y^2), not
+  sum((y - ybar)^2), so it measures fit against zero rather than against the
+  mean of y. That is what the jasmine quant-screen models have always reported;
+  it reads higher than the textbook R^2 whenever y has a non-zero mean.
+
+  sum((y - yhat)^2) is exactly what smile.validation.metric.RSS/of computes, so
+  this needs no Smile call at all."
+  ^double [y predictions]
+  (- 1.0 (/ (dfn/distance-squared y predictions)
+            (dfn/distance-squared y (repeat (count y) 0.0)))))
+
 ;;; Convenience: scale + extract arrays in one call
 
 (defn prepare-features
@@ -63,15 +107,13 @@
     :sigma          — estimated RBF bandwidth
     :features-array — double[][] ready for Smile fit/predict"
   [x-ds]
-  (let [scaler      (fit-scale x-ds)
-        scaled      (transform-scale x-ds scaler)
-        sigma       (estimate-sigma scaled)
-        feat-array  (.toArray ^DataFrame (dataset->dataframe scaled) (into-array String []))]
+  (let [scaler (fit-scale x-ds)
+        scaled (transform-scale x-ds scaler)]
     {:scaler         scaler
-     :sigma          sigma
-     :features-array feat-array}))
+     :sigma          (estimate-sigma scaled)
+     :features-array (dataset->array scaled)}))
 
 (defn scale-new-features
   "Scale a new feature dataset with a previously fitted scaler and return double[][]."
   [x-ds scaler]
-  (.toArray ^DataFrame (dataset->dataframe (transform-scale x-ds scaler)) (into-array String [])))
+  (dataset->array (transform-scale x-ds scaler)))
