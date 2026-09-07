@@ -1,4 +1,4 @@
-(defproject net.clojars.alex314159/svm-techml-smile "0.1.0-SNAPSHOT"
+(defproject net.clojars.alex314159/svm-techml-smile "0.1.0"
   :description "Shared utilities for tech.ml.dataset + Smile SVM/SVR workflows. Requires Java 25+ (smile-core 6.3.0)."
   :url "https://github.com/alex314159/svm-techml-smile"
   :license {:name "MIT"
