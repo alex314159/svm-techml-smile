@@ -16,7 +16,7 @@ Smile version pinned here (`smile-core 6.3.0`) — no Smile coordinate in their 
 ## Install
 
 ```clojure
-[net.clojars.alex314159/svm-techml-smile "0.1.0-SNAPSHOT"]
+[net.clojars.alex314159/svm-techml-smile "0.1.0"]
 ```
 
 `smile-core 6.3.0` is compiled for **Java 25+**, so point `JAVA_HOME` at a 25/26 JDK and pass
