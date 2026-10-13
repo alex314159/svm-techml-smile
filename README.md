@@ -10,16 +10,16 @@ This library carries the pieces back for the workflows we actually use: dataset 
 / double-array conversion, RBF kernel estimation, std-scaling, and SVM/SVR fit + predict.
 
 It is also the only place Smile is imported. Consumers depend on this library and get the
-Smile version pinned here (`smile-core 6.3.0`) — no Smile coordinate in their own `deps.edn`
+Smile version pinned here (`smile-core 7.0.0`) — no Smile coordinate in their own `deps.edn`
 / `project.clj`, no version skew across projects.
 
 ## Install
 
 ```clojure
-[net.clojars.alex314159/svm-techml-smile "0.1.0"]
+[net.clojars.alex314159/svm-techml-smile "0.1.1"]
 ```
 
-`smile-core 6.3.0` is compiled for **Java 25+**, so point `JAVA_HOME` at a 25/26 JDK and pass
+`smile-core 7.0.0` is compiled for **Java 25+**, so point `JAVA_HOME` at a 25/26 JDK and pass
 `--enable-native-access=ALL-UNNAMED` (already in this project's `:jvm-opts`).
 
 ## Namespaces
