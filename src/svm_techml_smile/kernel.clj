@@ -52,7 +52,7 @@
 ;;; SVM (classifier, labels {-1, +1})
 
 (defn fit-RBF-SVM
-  "Train a Gaussian-kernel SVM classifier via Smile 5's SVM/fit.
+  "Train a Gaussian-kernel SVM classifier via Smile's SVM/fit.
    x — double[][], y — int[], sigma — RBF bandwidth, tol — tolerance, C — regularisation.
    SVM$Options(C tol epochs=2) preserves 2-epoch convergence of the old LASVM-based API."
   [^"[[D" x ^"[I" y sigma tol C]
@@ -61,7 +61,7 @@
 ;;; SVR (regressor, continuous labels)
 
 (defn fit-RBF-SVR
-  "Train a Gaussian-kernel SVR via Smile 5's SVR.fit.
+  "Train a Gaussian-kernel SVR via Smile's SVR.fit.
    x — double[][], y — double[], sigma — RBF bandwidth, eps — epsilon tube, C — regularisation.
    tol=0.01 is the Smile SVR default; irrelevant for the RBF kernel but required by the API."
   [^"[[D" x ^"[D" y sigma eps C]
